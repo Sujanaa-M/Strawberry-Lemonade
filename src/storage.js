@@ -104,10 +104,38 @@ class StorageEngine {
     return newHabit;
   }
 
-  updateHabitProgress(id, amount) {
+  getStepSize(habit) {
+    const targetValue = habit.targetValue;
+    if (targetValue <= 15) return 1;
+
+    const unitLower = (habit.unit || '').toLowerCase();
+    if (unitLower.includes('step')) {
+      return 1000;
+    }
+    if (unitLower.includes('ml')) {
+      return 250;
+    }
+    if (unitLower.includes('min') || unitLower.includes('page') || unitLower.includes('minute')) {
+      return 5;
+    }
+
+    // Default fallback: divide target by 10 and round to clean multiplier
+    const divided = targetValue / 10;
+    if (divided >= 1000) return 1000;
+    if (divided >= 500) return 500;
+    if (divided >= 100) return 100;
+    if (divided >= 50) return 50;
+    if (divided >= 10) return 10;
+    if (divided >= 5) return 5;
+    return 1;
+  }
+
+  updateHabitProgress(id, direction) {
     const habits = this.getHabits();
     const habit = habits.find(h => h.id === id);
     if (habit) {
+      const stepSize = this.getStepSize(habit);
+      const amount = direction * stepSize;
       habit.currentValue = Math.max(0, Math.min(habit.targetValue, habit.currentValue + amount));
       this.saveHabits(habits);
     }
