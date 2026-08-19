@@ -7,6 +7,21 @@ const statHabitsMastered = document.getElementById('statHabitsMastered');
 const statCurrentLevel = document.getElementById('statCurrentLevel');
 
 const weeklyGoalList = document.getElementById('weeklyGoalList');
+const weeklyGoalsCount = document.getElementById('weeklyGoalsCount');
+const addWeeklyGoalForm = document.getElementById('addWeeklyGoalForm');
+const newWeeklyGoalInput = document.getElementById('newWeeklyGoalInput');
+
+// Badges Elements & Modal
+const badgesPreviewGrid = document.getElementById('badgesPreviewGrid');
+const badgesPreviewSubtitle = document.getElementById('badgesPreviewSubtitle');
+const viewBadgesAnchor = document.getElementById('viewBadgesAnchor');
+const allBadgesModal = document.getElementById('allBadgesModal');
+const badgesModalCloseBtn = document.getElementById('badgesModalCloseBtn');
+const badgesModalSubtitle = document.getElementById('badgesModalSubtitle');
+const allBadgesGrid = document.getElementById('allBadgesGrid');
+const badgeFilterBtns = document.querySelectorAll('.badge-filter-btn');
+
+let activeBadgeFilter = 'all';
 
 // Chart Switchers
 const btnWeeklyChart = document.getElementById('btnWeeklyChart');
@@ -26,6 +41,9 @@ const newTaskForm = document.getElementById('newTaskForm');
 document.addEventListener('DOMContentLoaded', () => {
   renderStats();
   renderWeeklyGoals();
+  renderBadgesCard();
+  setupWeeklyGoalsListeners();
+  setupBadgesModal();
   drawConsistencyChart('weekly');
   setupChartToggles();
   setupTaskModal();
@@ -33,6 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('storage', () => {
     renderStats();
     renderWeeklyGoals();
+    renderBadgesCard();
+    if (allBadgesModal && allBadgesModal.classList.contains('active')) {
+      renderAllBadgesModal(activeBadgeFilter);
+    }
     drawConsistencyChart('weekly');
   });
 });
@@ -47,45 +69,90 @@ function renderStats() {
   if (statCurrentLevel) statCurrentLevel.textContent = `Lvl ${stats.currentLevel}`;
 }
 
-// Render Weekly Goals checklist matching mockup ratios
+// Render Weekly Goals checklist with Sunday auto-reset
 function renderWeeklyGoals() {
   if (!weeklyGoalList) return;
   weeklyGoalList.innerHTML = '';
 
-  const habits = storage.getHabits();
-  
-  // Custom mapping goals. If no habits exist, default mockup items.
-  const morningWater = habits.find(h => h.name.toLowerCase().includes('water') || h.name.toLowerCase().includes('hydration'));
-  const walkHabit = habits.find(h => h.name.toLowerCase().includes('walk'));
-  const readHabit = habits.find(h => h.name.toLowerCase().includes('read'));
+  const goals = storage.getWeeklyGoals();
+  const completedCount = goals.filter(g => g.completed).length;
 
-  // Define goals list
-  const goals = [
-    {
-      name: 'Morning Lemon Water',
-      current: morningWater ? morningWater.currentValue : 5,
-      target: morningWater ? morningWater.targetValue : 7
-    },
-    {
-      name: '30m Walk',
-      current: walkHabit ? walkHabit.currentValue : 3,
-      target: walkHabit ? walkHabit.targetValue : 5
-    },
-    {
-      name: 'Read 10 Pages',
-      current: readHabit ? Math.min(4, Math.floor(readHabit.currentValue / 10) || 1) : 1,
-      target: 4
-    }
-  ];
+  if (weeklyGoalsCount) {
+    weeklyGoalsCount.textContent = `${completedCount} / ${goals.length} done`;
+  }
+
+  if (goals.length === 0) {
+    const emptyEl = document.createElement('div');
+    emptyEl.className = 'weekly-goal-empty';
+    emptyEl.innerHTML = `
+      <span>🍋</span>
+      No goals yet for this week!<br>Add your top priorities above.
+    `;
+    weeklyGoalList.appendChild(emptyEl);
+    return;
+  }
 
   goals.forEach(goal => {
     const item = document.createElement('div');
-    item.className = 'weekly-goal-item';
+    item.className = `weekly-goal-item ${goal.completed ? 'completed' : ''}`;
+    item.dataset.id = goal.id;
+
     item.innerHTML = `
-      <span class="weekly-goal-name">${escapeHtml(goal.name)}</span>
-      <span class="weekly-goal-progress">${goal.current} / ${goal.target}</span>
+      <div class="weekly-goal-left" role="button" tabindex="0" title="Toggle goal completion">
+        <div class="weekly-goal-checkbox" aria-label="Toggle goal status">
+          <svg viewBox="0 0 24 24">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <span class="weekly-goal-name">${escapeHtml(goal.text)}</span>
+      </div>
+      <button class="weekly-goal-delete-btn" aria-label="Delete goal" title="Delete goal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
     `;
+
+    // Toggle completion on click or space/enter key
+    const leftPart = item.querySelector('.weekly-goal-left');
+    const toggleHandler = () => {
+      storage.toggleWeeklyGoal(goal.id);
+      renderWeeklyGoals();
+    };
+
+    leftPart.addEventListener('click', toggleHandler);
+    leftPart.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleHandler();
+      }
+    });
+
+    // Delete goal button
+    const deleteBtn = item.querySelector('.weekly-goal-delete-btn');
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      storage.deleteWeeklyGoal(goal.id);
+      renderWeeklyGoals();
+    });
+
     weeklyGoalList.appendChild(item);
+  });
+}
+
+// Setup form and goal submission listeners
+function setupWeeklyGoalsListeners() {
+  if (!addWeeklyGoalForm || !newWeeklyGoalInput) return;
+
+  addWeeklyGoalForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = newWeeklyGoalInput.value.trim();
+    if (!text) return;
+
+    storage.addWeeklyGoal(text);
+    newWeeklyGoalInput.value = '';
+    renderWeeklyGoals();
   });
 }
 
@@ -235,6 +302,126 @@ function setupTaskModal() {
     storage.addTask(text, category);
     closeTaskModal();
     renderStats(); // Update metrics counter instantly
+  });
+}
+
+// Render top preview badges on the progress card
+function renderBadgesCard() {
+  if (!badgesPreviewGrid) return;
+  badgesPreviewGrid.innerHTML = '';
+
+  const badges = storage.getBadges();
+  const unlockedCount = badges.filter(b => b.unlocked).length;
+
+  if (badgesPreviewSubtitle) {
+    badgesPreviewSubtitle.textContent = `${unlockedCount} of ${badges.length} unlocked`;
+  }
+
+  // Display top 4 badges
+  badges.slice(0, 4).forEach(badge => {
+    const badgeEl = document.createElement('div');
+    badgeEl.className = `badge-item ${badge.unlocked ? '' : 'locked'}`;
+    badgeEl.title = badge.unlocked ? `Unlocked: ${badge.name}` : `Locked: ${badge.criteria}`;
+    badgeEl.innerHTML = `
+      <div class="badge-icon-holder" style="background-color: ${badge.bgColor}; color: ${badge.textColor};">
+        ${badge.icon}
+      </div>
+      <span class="badge-label">${escapeHtml(badge.name)}</span>
+    `;
+    badgesPreviewGrid.appendChild(badgeEl);
+  });
+}
+
+// Setup Badges Modal Trigger & Events
+function setupBadgesModal() {
+  if (!allBadgesModal || !viewBadgesAnchor || !badgesModalCloseBtn) return;
+
+  const openModal = () => {
+    allBadgesModal.classList.add('active');
+    renderAllBadgesModal(activeBadgeFilter);
+  };
+
+  const closeModal = () => {
+    allBadgesModal.classList.remove('active');
+  };
+
+  viewBadgesAnchor.addEventListener('click', (e) => {
+    e.preventDefault();
+    openModal();
+  });
+
+  badgesModalCloseBtn.addEventListener('click', closeModal);
+
+  allBadgesModal.addEventListener('click', (e) => {
+    if (e.target === allBadgesModal) closeModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && allBadgesModal.classList.contains('active')) {
+      closeModal();
+    }
+  });
+
+  // Filter Buttons
+  badgeFilterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      badgeFilterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeBadgeFilter = btn.dataset.badgeFilter || 'all';
+      renderAllBadgesModal(activeBadgeFilter);
+    });
+  });
+}
+
+// Render All Badges inside the modal grid
+function renderAllBadgesModal(filter = 'all') {
+  if (!allBadgesGrid) return;
+  allBadgesGrid.innerHTML = '';
+
+  const badges = storage.getBadges();
+  const unlockedCount = badges.filter(b => b.unlocked).length;
+
+  if (badgesModalSubtitle) {
+    const pct = Math.round((unlockedCount / badges.length) * 100);
+    badgesModalSubtitle.textContent = `${unlockedCount} of ${badges.length} Badges Unlocked (${pct}% Complete)`;
+  }
+
+  const filteredBadges = badges.filter(b => {
+    if (filter === 'unlocked') return b.unlocked;
+    if (filter === 'locked') return !b.unlocked;
+    return true;
+  });
+
+  if (filteredBadges.length === 0) {
+    allBadgesGrid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 36px 12px; color: var(--text-muted); font-style: italic;">
+        No badges found in this category. Keep squeezing your goals! 🍋
+      </div>
+    `;
+    return;
+  }
+
+  filteredBadges.forEach(badge => {
+    const card = document.createElement('div');
+    card.className = `badge-detail-card ${badge.unlocked ? 'unlocked' : 'locked'}`;
+    
+    card.innerHTML = `
+      <div class="badge-detail-icon" style="background-color: ${badge.bgColor}; color: ${badge.textColor};" title="${escapeHtml(badge.name)}">
+        ${badge.icon}
+      </div>
+      <div class="badge-detail-info">
+        <div class="badge-detail-title-row">
+          <span class="badge-detail-name">${escapeHtml(badge.name)}</span>
+          <span class="badge-status-pill ${badge.unlocked ? 'unlocked' : 'locked'}">
+            ${badge.unlocked ? '✓ Unlocked' : '🔒 In Progress'}
+          </span>
+        </div>
+        <p class="badge-detail-desc">${escapeHtml(badge.description)}</p>
+        <span class="badge-detail-criteria">Target: ${escapeHtml(badge.criteria)}</span>
+      </div>
+    `;
+
+    allBadgesGrid.appendChild(card);
   });
 }
 

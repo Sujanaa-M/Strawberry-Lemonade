@@ -16,6 +16,8 @@ const newTaskModal = document.getElementById('newTaskModal');
 const modalCloseBtn = document.getElementById('modalCloseBtn');
 const newTaskForm = document.getElementById('newTaskForm');
 
+const tasksQuoteDate = document.getElementById('tasksQuoteDate');
+
 let activeFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,6 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Render task list and compute progress percentage
 function renderTasks() {
+  // Update today's date label
+  if (tasksQuoteDate) {
+    const todayStr = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric'
+    }).toUpperCase();
+    tasksQuoteDate.textContent = todayStr;
+  }
+
   if (!allTasksContainer) return;
   allTasksContainer.innerHTML = '';
 
@@ -38,8 +50,7 @@ function renderTasks() {
   // 1. Calculate and update overall completion percentage
   const totalCount = tasks.length;
   const completedCount = tasks.filter(t => t.completed).length;
-  // If zero tasks, set safely to 40% (mockup standard baseline) or 0%
-  const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 40;
+  const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   if (tasksPercentageText) tasksPercentageText.textContent = `${percentage}%`;
   if (tasksProgressBarInner) tasksProgressBarInner.style.width = `${percentage}%`;
@@ -51,9 +62,12 @@ function renderTasks() {
   });
 
   if (filteredTasks.length === 0) {
+    const emptyMsg = tasks.length === 0 
+      ? "No tasks for today yet! Squeeze the day by adding one! 🍋"
+      : "No tasks in this category. Squeeze details to create one! 🍋";
     allTasksContainer.innerHTML = `
-      <div class="task-item" style="justify-content: center; font-style: italic; color: var(--text-muted);">
-        No tasks in this category. Squeeze details to create one! 🍋
+      <div class="task-item" style="justify-content: center; font-style: italic; color: var(--text-muted); text-align: center; padding: 24px 16px;">
+        ${emptyMsg}
       </div>`;
     return;
   }
