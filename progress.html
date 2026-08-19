@@ -5,9 +5,9 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22 width=%2232%22 height=%2232%22><text y=%2226%22 font-size=%2228%22>🍓</text></svg>" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Strawberry Lemonade - Progress Analytics</title>
-  <script type="module" crossorigin src="/Strawberry-Lemonade/assets/progress-DwlxDVJo.js"></script>
-  <link rel="modulepreload" crossorigin href="/Strawberry-Lemonade/assets/storage-Zs3SgMY6.js">
-  <link rel="stylesheet" crossorigin href="/Strawberry-Lemonade/assets/storage-D_cI6Nv3.css">
+  <script type="module" crossorigin src="/Strawberry-Lemonade/assets/progress-D0MuhPhv.js"></script>
+  <link rel="modulepreload" crossorigin href="/Strawberry-Lemonade/assets/storage-CqDzK5fc.js">
+  <link rel="stylesheet" crossorigin href="/Strawberry-Lemonade/assets/storage-okA9ATqh.css">
 </head>
 <body>
   <div class="app-container">
@@ -187,41 +187,85 @@
         <div style="display: flex; flex-direction: column; gap: 28px;">
           <!-- Weekly Goals checklist -->
           <section class="weekly-goals-card">
-            <h3 class="chart-title" style="margin-bottom: 20px;">Weekly Goals</h3>
+            <div class="weekly-goals-header">
+              <div>
+                <h3 class="chart-title" style="margin-bottom: 2px;">Weekly Goals</h3>
+                <span class="weekly-goals-subtitle">Resets every Sunday</span>
+              </div>
+              <span class="weekly-goals-badge" id="weeklyGoalsCount">0 / 0 done</span>
+            </div>
+
+            <!-- Form to add custom weekly goal -->
+            <form class="weekly-goal-add-form" id="addWeeklyGoalForm">
+              <input 
+                type="text" 
+                id="newWeeklyGoalInput" 
+                class="weekly-goal-input" 
+                placeholder="Add a goal for this week..." 
+                maxlength="80" 
+                autocomplete="off" 
+                required 
+              />
+              <button type="submit" class="weekly-goal-add-btn" aria-label="Add goal" title="Add goal">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </form>
+
             <div class="weekly-goal-list" id="weeklyGoalList">
-              <!-- Dynamic weekly goal ratios -->
+              <!-- Dynamic weekly goal checklist items -->
             </div>
           </section>
 
           <!-- Badges card -->
           <section class="badges-card">
             <div class="badges-header">
-              <h3 class="chart-title" style="margin-bottom: 0;">Sweet Badges Earned</h3>
-              <a href="#" class="badges-link-view" style="color: var(--accent-pink); font-size: 0.85rem; font-weight: 700; text-decoration: none;" id="viewBadgesAnchor">View All</a>
+              <div>
+                <h3 class="chart-title" style="margin-bottom: 2px;">Sweet Badges Earned</h3>
+                <span class="weekly-goals-subtitle" id="badgesPreviewSubtitle">Achievement milestones</span>
+              </div>
+              <button class="badges-link-view" style="background: none; border: none; cursor: pointer; color: var(--accent-pink); font-size: 0.85rem; font-weight: 700; text-decoration: none; font-family: inherit;" id="viewBadgesAnchor">View All</button>
             </div>
             
-            <div class="badges-grid">
-              <div class="badge-item">
-                <div class="badge-icon-holder" style="background-color: #FFF9D4; color: #B38600;" title="Unlocked!">☀️</div>
-                <span class="badge-label">7-Day Streak</span>
-              </div>
-              <div class="badge-item">
-                <div class="badge-icon-holder" style="background-color: #FFEBF0; color: #FF8EA5;" title="Unlocked!">🌸</div>
-                <span class="badge-label">All Tasks Done</span>
-              </div>
-              <div class="badge-item">
-                <div class="badge-icon-holder" style="background-color: #E8F7EE; color: #2D9F58;" title="Unlocked!">💮</div>
-                <span class="badge-label">Early Bird</span>
-              </div>
-              <div class="badge-item">
-                <div class="badge-icon-holder" style="background-color: #E6F0FF; color: #3B82F6;" title="Unlocked!">💧</div>
-                <span class="badge-label">Hydration Hero</span>
-              </div>
+            <div class="badges-grid" id="badgesPreviewGrid">
+              <!-- Dynamic top unlocked badges -->
             </div>
           </section>
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- All Badges Modal Overlay -->
+  <div class="modal-overlay" id="allBadgesModal">
+    <div class="modal-content badges-modal-content">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Sweet Badges & Trophies 🍓</h2>
+          <span class="badges-modal-subtitle" id="badgesModalSubtitle">Loading achievements...</span>
+        </div>
+        <button class="modal-close-btn" id="badgesModalCloseBtn" aria-label="Close modal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Badge Filters -->
+      <div class="badge-filter-row">
+        <button class="badge-filter-btn active" data-badge-filter="all">All Badges</button>
+        <button class="badge-filter-btn" data-badge-filter="unlocked">Unlocked 🏆</button>
+        <button class="badge-filter-btn" data-badge-filter="locked">In Progress 🔒</button>
+      </div>
+
+      <!-- Scrollable Badges Grid -->
+      <div class="all-badges-grid" id="allBadgesGrid">
+        <!-- Rendered all badges -->
+      </div>
+    </div>
   </div>
 
   <!-- New Task Modal Overlay (Re-used for Sidebar consistency) -->
